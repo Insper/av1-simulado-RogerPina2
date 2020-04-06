@@ -63,13 +63,13 @@ void io_init(void)
 {
 	// Configura led
 	pmc_enable_periph_clk(LED1_PIO_ID);
-	pio_configure(LED1_PIO, PIO_OUTPUT_0, LED1_IDX_MASK, PIO_PULLUP);
+	pio_configure(LED1_PIO, PIO_OUTPUT_0, LED1_IDX_MASK, PIO_DEFAULT);
 	
 	pmc_enable_periph_clk(LED2_PIO_ID);
-	pio_configure(LED2_PIO, PIO_OUTPUT_0, LED2_IDX_MASK, PIO_DEFAULT);
+	pio_configure(LED2_PIO, PIO_OUTPUT_1, LED2_IDX_MASK, PIO_DEFAULT);
 	
 	pmc_enable_periph_clk(LED3_PIO_ID);
-	pio_configure(LED3_PIO, PIO_OUTPUT_0, LED3_IDX_MASK, PIO_PULLUP);
+	pio_configure(LED3_PIO, PIO_OUTPUT_0, LED3_IDX_MASK, PIO_DEFAULT);
 	
 	// Inicializa clock do periférico PIO responsavel pelo botao
 	pmc_enable_periph_clk(BUT1_PIO_ID);

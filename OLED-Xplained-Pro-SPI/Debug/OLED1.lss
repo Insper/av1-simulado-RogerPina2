@@ -3235,10 +3235,10 @@ void io_init(void)
   401308:	200a      	movs	r0, #10
   40130a:	4d38      	ldr	r5, [pc, #224]	; (4013ec <io_init+0xe8>)
   40130c:	47a8      	blx	r5
-	pio_configure(LED1_PIO, PIO_OUTPUT_0, LED1_IDX_MASK, PIO_PULLUP);
+	pio_configure(LED1_PIO, PIO_OUTPUT_0, LED1_IDX_MASK, PIO_DEFAULT);
   40130e:	4e38      	ldr	r6, [pc, #224]	; (4013f0 <io_init+0xec>)
-  401310:	2301      	movs	r3, #1
-  401312:	461a      	mov	r2, r3
+  401310:	2300      	movs	r3, #0
+  401312:	2201      	movs	r2, #1
   401314:	f04f 5140 	mov.w	r1, #805306368	; 0x30000000
   401318:	4630      	mov	r0, r6
   40131a:	4c36      	ldr	r4, [pc, #216]	; (4013f4 <io_init+0xf0>)
@@ -3247,19 +3247,19 @@ void io_init(void)
 	pmc_enable_periph_clk(LED2_PIO_ID);
   40131e:	200c      	movs	r0, #12
   401320:	47a8      	blx	r5
-	pio_configure(LED2_PIO, PIO_OUTPUT_0, LED2_IDX_MASK, PIO_DEFAULT);
+	pio_configure(LED2_PIO, PIO_OUTPUT_1, LED2_IDX_MASK, PIO_DEFAULT);
   401322:	4f35      	ldr	r7, [pc, #212]	; (4013f8 <io_init+0xf4>)
   401324:	2300      	movs	r3, #0
   401326:	f04f 4280 	mov.w	r2, #1073741824	; 0x40000000
-  40132a:	f04f 5140 	mov.w	r1, #805306368	; 0x30000000
+  40132a:	f04f 5160 	mov.w	r1, #939524096	; 0x38000000
   40132e:	4638      	mov	r0, r7
   401330:	47a0      	blx	r4
 	
 	pmc_enable_periph_clk(LED3_PIO_ID);
   401332:	200b      	movs	r0, #11
   401334:	47a8      	blx	r5
-	pio_configure(LED3_PIO, PIO_OUTPUT_0, LED3_IDX_MASK, PIO_PULLUP);
-  401336:	2301      	movs	r3, #1
+	pio_configure(LED3_PIO, PIO_OUTPUT_0, LED3_IDX_MASK, PIO_DEFAULT);
+  401336:	2300      	movs	r3, #0
   401338:	2204      	movs	r2, #4
   40133a:	f04f 5140 	mov.w	r1, #805306368	; 0x30000000
   40133e:	482f      	ldr	r0, [pc, #188]	; (4013fc <io_init+0xf8>)
