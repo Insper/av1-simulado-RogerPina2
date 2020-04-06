@@ -199,7 +199,7 @@ void RTC_Handler(void)
 	
 	/* Time or date alarm */
 	if ((ul_status & RTC_SR_ALARM) == RTC_SR_ALARM) {
-			rtc_clear_status(RTC, RTC_SCCR_ALRCLR);
+		rtc_clear_status(RTC, RTC_SCCR_ALRCLR);
 		flag_rtc = 1;
 	}
 	
@@ -375,6 +375,12 @@ int main (void)
 	// Escreve na tela um circulo e um texto
 		//gfx_mono_draw_string("5 10 1", 2,4, &sysfont);
 		
+	/** Configura RTC */
+	calendar rtc_initial = {2019, 4, 06, 15, 20, 03, 00};
+	RTC_init(RTC, ID_RTC, rtc_initial, RTC_IER_ALREN);
+
+	//escreverhora(RTC, rtc_initial);
+		
 	/** Configura timer TC0, canal 1 com 4Hz */
 		TC_init(TC0, ID_TC1, 1, 5);
 		TC_init(TC1, ID_TC4, 1, 10);
@@ -382,25 +388,18 @@ int main (void)
 		
 	// Inicializa RTT com IRQ no alarme.
 	f_rtt_alarme = true;
-	
-	/** Configura RTC */
-	calendar rtc_initial = {2019, 4, 06, 15, 20, 03, 00};
-	RTC_init(RTC, ID_RTC, rtc_initial, RTC_IER_ALREN);
-	
-	/* configura alarme do RTC */
-	rtc_set_date_alarm(RTC, 1, rtc_initial.month, 1, rtc_initial.day);
-	rtc_set_time_alarm(RTC, 1, rtc_initial.hour, 1, rtc_initial.minute, 1, rtc_initial.seccond + 1);
 
 	/* Insert application code here, after the board has been initialized. */
 	int px = 8;
 	while(1) {
-		/*
-		if (flag_rtc) {
+		
+		/*			
+		if (tc7_flag) {
 			escreverhora(RTC, rtc_initial);
-			flag_rtc = false;
+			tc7_flag = 0;
 		}
 		*/
-		
+			
 		if (f_rtt_sem) {
 			if (but1_flag) {
 				if (tc1_flag) {
@@ -422,7 +421,7 @@ int main (void)
 					tc7_flag = 0;
 				}
 			}
-
+			
 			if (tc7_flag_display) {
 				gfx_mono_draw_filled_circle(px, 28, 3, GFX_PIXEL_SET, GFX_WHOLE);
 				gfx_mono_draw_filled_circle(px + 12, 28, 3, GFX_PIXEL_SET, GFX_WHOLE);
@@ -448,6 +447,7 @@ int main (void)
 			
 			f_rtt_alarme = false;
 		}
+		
 		pmc_sleep(SAM_PM_SMODE_SLEEP_WFI);
 	}
 }
