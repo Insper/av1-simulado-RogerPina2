@@ -292,10 +292,12 @@ int main (void)
   // Init OLED
 	gfx_mono_ssd1306_init();
   
-  // Escreve na tela um circulo e um texto
-	gfx_mono_draw_filled_circle(20, 16, 16, GFX_PIXEL_SET, GFX_WHOLE);
-  gfx_mono_draw_string("mundo", 50,16, &sysfont);
-  
+	// Escreve na tela um circulo e um texto
+		//gfx_mono_draw_filled_circle(20, 16, 16, GFX_PIXEL_SET, GFX_WHOLE);
+		gfx_mono_draw_string("5", 10,4, &sysfont);
+		gfx_mono_draw_string("10", 50,4, &sysfont);
+		gfx_mono_draw_string("1", 100,4, &sysfont);
+		
 	/** Configura timer TC0, canal 1 com 4Hz */
 		TC_init(TC0, ID_TC1, 1, 5);
 		TC_init(TC1, ID_TC4, 1, 10);
