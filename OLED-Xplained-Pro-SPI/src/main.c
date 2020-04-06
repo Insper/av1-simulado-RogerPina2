@@ -42,6 +42,9 @@ volatile char but1_flag = 0;
 volatile char but2_flag = 0;
 volatile char but3_flag = 0;
 
+volatile Bool f_rtt_alarme = false;
+volatile Bool f_rtt_sem = false;
+
 void io_init(void);
 
 /**
@@ -133,6 +136,32 @@ void TC7_Handler(void){
 	tc7_flag = 1;
 }
 
+void RTT_Handler(void)
+{
+	uint32_t ul_status;
+
+	/* Get RTT status - ACK */
+	ul_status = rtt_get_status(RTT);
+	
+	/* IRQ due to Time has changed */
+	if ((ul_status & RTT_SR_RTTINC) == RTT_SR_RTTINC) {
+		f_rtt_alarme = false;
+		//pin_toggle(LED_PIO, LED_IDX_MASK);    // BLINK Led
+	}
+	
+	
+	/* IRQ due to Alarm */
+	if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
+		// pin_toggle(LED_PIO, LED_IDX_MASK);    // BLINK Led
+		f_rtt_alarme = true;                  // flag RTT alarme
+		if (f_rtt_sem) {
+			f_rtt_sem = false;
+		} else {
+			f_rtt_sem = true;
+		}
+	}
+}
+
 /**
 * Configura TimerCounter (TC) para gerar uma interrupcao no canal (ID_TC e TC_CHANNEL)
 * na taxa de especificada em freq.
@@ -165,6 +194,26 @@ void TC_init(Tc * TC, int ID_TC, int TC_CHANNEL, int freq){
 	tc_start(TC, TC_CHANNEL);
 }
 
+static void RTT_init(uint16_t pllPreScale, uint32_t IrqNPulses)
+{
+  uint32_t ul_previous_time;
+
+  /* Configure RTT for a 1 second tick interrupt */
+  rtt_sel_source(RTT, false);
+  rtt_init(RTT, pllPreScale);
+  
+  ul_previous_time = rtt_read_timer_value(RTT);
+  while (ul_previous_time == rtt_read_timer_value(RTT));
+  
+  rtt_write_alarm_time(RTT, IrqNPulses+ul_previous_time);
+
+  /* Enable RTT interrupt */
+  NVIC_DisableIRQ(RTT_IRQn);
+  NVIC_ClearPendingIRQ(RTT_IRQn);
+  NVIC_SetPriority(RTT_IRQn, 0);
+  NVIC_EnableIRQ(RTT_IRQn);
+  rtt_enable_interrupt(RTT, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
+}
 
 void io_init(void)
 {
@@ -251,30 +300,47 @@ int main (void)
 		TC_init(TC0, ID_TC1, 1, 5);
 		TC_init(TC1, ID_TC4, 1, 10);
 		TC_init(TC2, ID_TC7, 1, 1);
+		
+	// Inicializa RTT com IRQ no alarme.
+	f_rtt_alarme = true;
 
   /* Insert application code here, after the board has been initialized. */
 	while(1) {
-		if (but1_flag) {
-			if (tc1_flag) {
-			pisca_led(LED1_PIO,LED1_IDX_MASK);
-			tc1_flag = 0;
+		if (f_rtt_sem) {
+			if (but1_flag) {
+				if (tc1_flag) {
+					pisca_led(LED1_PIO,LED1_IDX_MASK);
+					tc1_flag = 0;
+				}
+			}
+			
+			if (but2_flag) {
+				if (tc4_flag) {
+					pisca_led(LED2_PIO, LED2_IDX_MASK);
+					tc4_flag = 0;
+				}
+			}
+			
+			if (but3_flag) {
+				if (tc7_flag) {
+					pisca_led(LED3_PIO, LED3_IDX_MASK);
+					tc7_flag = 0;
+				}
 			}
 		}
 		
-		if (but2_flag) {
-			if (tc4_flag) {
-				pisca_led(LED2_PIO, LED2_IDX_MASK);
-				tc4_flag = 0;
-			}
+		if (f_rtt_alarme){	
+			/*
+			* IRQ apos 5s -> 
+			*/
+			uint16_t pllPreScale = (int) (((float) 32768) / 4.0);
+			uint32_t irqRTTvalue = 20;
+      
+			// reinicia RTT para gerar um novo IRQ
+			RTT_init(pllPreScale, irqRTTvalue);         
+      
+			f_rtt_alarme = false;
 		}
-		
-		if (but3_flag) {
-			if (tc7_flag) {
-				pisca_led(LED3_PIO, LED3_IDX_MASK);
-				tc7_flag = 0;
-			}
-		}
-		
 		pmc_sleep(SAM_PM_SMODE_SLEEP_WFI);
 	}
 }
