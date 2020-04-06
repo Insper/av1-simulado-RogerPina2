@@ -4,6 +4,8 @@
 
 src\ASF\common\services\sleepmgr\sam\sleepmgr.c
 
+src\ASF\sam\drivers\rtc\rtc.c
+
 src\ASF\sam\drivers\rtt\rtt.c
 
 src\ASF\sam\drivers\spi\spi.c

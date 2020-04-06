@@ -4,6 +4,21 @@
 #include "gfx_mono_text.h"
 #include "sysfont.h"
 
+/**
+ *  Informacoes para o RTC
+ *  poderia ser extraida do __DATE__ e __TIME__
+ *  ou ser atualizado pelo PC.
+ */
+typedef struct  {
+  uint32_t year;
+  uint32_t month;
+  uint32_t day;
+  uint32_t week;
+  uint32_t hour;
+  uint32_t minute;
+  uint32_t seccond;
+} calendar;
+
 #define LED1_PIO			PIOA
 #define LED1_PIO_ID			ID_PIOA
 #define LED1_IDX			0
@@ -37,13 +52,16 @@
 volatile char tc1_flag;
 volatile char tc4_flag;
 volatile char tc7_flag;
+volatile char tc7_flag_display;
 
 volatile char but1_flag = 0;
 volatile char but2_flag = 0;
 volatile char but3_flag = 0;
 
-volatile Bool f_rtt_alarme = false;
-volatile Bool f_rtt_sem = false;
+volatile Bool f_rtt_alarme = true;
+volatile Bool f_rtt_sem = true;
+
+volatile Bool flag_rtc = false;
 
 void io_init(void);
 
@@ -134,6 +152,7 @@ void TC7_Handler(void){
 
 	/** Muda o estado do LED */
 	tc7_flag = 1;
+	tc7_flag_display = 1;
 }
 
 void RTT_Handler(void)
@@ -160,6 +179,34 @@ void RTT_Handler(void)
 			f_rtt_sem = true;
 		}
 	}
+}
+
+/**
+* \brief Interrupt handler for the RTC. Refresh the display.
+*/
+void RTC_Handler(void)
+{
+	uint32_t ul_status = rtc_get_status(RTC);
+
+	/*
+	*  Verifica por qual motivo entrou
+	*  na interrupcao, se foi por segundo
+	*  ou Alarm
+	*/
+	if ((ul_status & RTC_SR_SEC) == RTC_SR_SEC) {
+		rtc_clear_status(RTC, RTC_SCCR_SECCLR);
+	}
+	
+	/* Time or date alarm */
+	if ((ul_status & RTC_SR_ALARM) == RTC_SR_ALARM) {
+			rtc_clear_status(RTC, RTC_SCCR_ALRCLR);
+		flag_rtc = 1;
+	}
+	
+	rtc_clear_status(RTC, RTC_SCCR_ACKCLR);
+	rtc_clear_status(RTC, RTC_SCCR_TIMCLR);
+	rtc_clear_status(RTC, RTC_SCCR_CALCLR);
+	rtc_clear_status(RTC, RTC_SCCR_TDERRCLR);
 }
 
 /**
@@ -213,6 +260,30 @@ static void RTT_init(uint16_t pllPreScale, uint32_t IrqNPulses)
   NVIC_SetPriority(RTT_IRQn, 0);
   NVIC_EnableIRQ(RTT_IRQn);
   rtt_enable_interrupt(RTT, RTT_MR_ALMIEN | RTT_MR_RTTINCIEN);
+}
+
+/**
+* Configura o RTC para funcionar com interrupcao de alarme
+*/
+void RTC_init(Rtc *rtc, uint32_t id_rtc, calendar t, uint32_t irq_type){
+	/* Configura o PMC */
+	pmc_enable_periph_clk(ID_RTC);
+
+	/* Default RTC configuration, 24-hour mode */
+	rtc_set_hour_mode(rtc, 0);
+
+	/* Configura data e hora manualmente */
+	rtc_set_date(rtc, t.year, t.month, t.day, t.week);
+	rtc_set_time(rtc, t.hour, t.minute, t.seccond);
+
+	/* Configure RTC interrupts */
+	NVIC_DisableIRQ(id_rtc);
+	NVIC_ClearPendingIRQ(id_rtc);
+	NVIC_SetPriority(id_rtc, 0);
+	NVIC_EnableIRQ(id_rtc);
+
+	/* Ativa interrupcao via alarme */
+	rtc_enable_interrupt(rtc,  irq_type);
 }
 
 void io_init(void)
@@ -279,6 +350,15 @@ void io_init(void)
 	NVIC_SetPriority(BUT3_PIO_ID, 4); // Prioridade 4
 }
 
+void escreverhora(Rtc *rtc, calendar t){
+	uint32_t h, m, s;
+	rtc_get_time(rtc, &h, &m, &s);
+	
+	char hora[512];
+	sprintf(hora, "%2d:%2d:%2d", h, m, s);
+	
+	gfx_mono_draw_string(hora, 20, 4, &sysfont);
+}
 
 int main (void)
 {
@@ -289,14 +369,11 @@ int main (void)
 	sysclk_init();
 	delay_init();
 
-  // Init OLED
+	// Init OLED
 	gfx_mono_ssd1306_init();
   
 	// Escreve na tela um circulo e um texto
-		//gfx_mono_draw_filled_circle(20, 16, 16, GFX_PIXEL_SET, GFX_WHOLE);
-		gfx_mono_draw_string("5", 10,4, &sysfont);
-		gfx_mono_draw_string("10", 50,4, &sysfont);
-		gfx_mono_draw_string("1", 100,4, &sysfont);
+		//gfx_mono_draw_string("5 10 1", 2,4, &sysfont);
 		
 	/** Configura timer TC0, canal 1 com 4Hz */
 		TC_init(TC0, ID_TC1, 1, 5);
@@ -305,9 +382,25 @@ int main (void)
 		
 	// Inicializa RTT com IRQ no alarme.
 	f_rtt_alarme = true;
+	
+	/** Configura RTC */
+	calendar rtc_initial = {2019, 4, 06, 15, 20, 03, 00};
+	RTC_init(RTC, ID_RTC, rtc_initial, RTC_IER_ALREN);
+	
+	/* configura alarme do RTC */
+	rtc_set_date_alarm(RTC, 1, rtc_initial.month, 1, rtc_initial.day);
+	rtc_set_time_alarm(RTC, 1, rtc_initial.hour, 1, rtc_initial.minute, 1, rtc_initial.seccond + 1);
 
-  /* Insert application code here, after the board has been initialized. */
+	/* Insert application code here, after the board has been initialized. */
+	int px = 8;
 	while(1) {
+		/*
+		if (flag_rtc) {
+			escreverhora(RTC, rtc_initial);
+			flag_rtc = false;
+		}
+		*/
+		
 		if (f_rtt_sem) {
 			if (but1_flag) {
 				if (tc1_flag) {
@@ -329,6 +422,13 @@ int main (void)
 					tc7_flag = 0;
 				}
 			}
+
+			if (tc7_flag_display) {
+				gfx_mono_draw_filled_circle(px, 28, 3, GFX_PIXEL_SET, GFX_WHOLE);
+				gfx_mono_draw_filled_circle(px + 12, 28, 3, GFX_PIXEL_SET, GFX_WHOLE);
+				px += 24;
+				tc7_flag_display = 0;
+			}
 		}
 		
 		if (f_rtt_alarme){	
@@ -339,8 +439,13 @@ int main (void)
 			uint32_t irqRTTvalue = 20;
       
 			// reinicia RTT para gerar um novo IRQ
-			RTT_init(pllPreScale, irqRTTvalue);         
-      
+			RTT_init(pllPreScale, irqRTTvalue);       
+			
+			px = 8;
+			gfx_mono_draw_string("            ",0,24, &sysfont);
+			gfx_mono_draw_string("            ",0,28, &sysfont);
+			tc7_flag_display = false;
+			
 			f_rtt_alarme = false;
 		}
 		pmc_sleep(SAM_PM_SMODE_SLEEP_WFI);
