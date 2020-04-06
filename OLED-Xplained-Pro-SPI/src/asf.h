@@ -93,9 +93,15 @@
 // From module: SPI - Serial Peripheral Interface
 #include <spi.h>
 
+// From module: Sleep manager - SAM implementation
+#include <sam/sleepmgr.h>
+#include <sleepmgr.h>
+
 // From module: System Clock Control - SAME70 implementation
 #include <sysclk.h>
 
+// From module: TC - Timer Counter
+#include <tc.h>
 
 // From module: pio_handler support enabled
 #include <pio_handler.h>
