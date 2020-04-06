@@ -38,9 +38,9 @@ volatile char tc1_flag;
 volatile char tc4_flag;
 volatile char tc7_flag;
 
-volatile char but1_flag;
-volatile char but2_flag;
-volatile char but3_flag;
+volatile char but1_flag = 0;
+volatile char but2_flag = 0;
+volatile char but3_flag = 0;
 
 void io_init(void);
 
@@ -48,21 +48,33 @@ void io_init(void);
 * callback do botao1
 */
 void but1_callback(void){
-	but1_flag = 0;
+	if (but1_flag == 1) {
+		but1_flag = 0;
+	} else {
+		but1_flag = 1;
+	}
 }
 
 /**
 * callback do botao2
 */
 void but2_callback(void){
-	but2_flag = 0;
+	if (but2_flag == 1) {
+		but2_flag = 0;
+	} else {
+		but2_flag = 1;
+	}
 }
 
 /**
 * callback do botao3
 */
 void but3_callback(void){
-	but3_flag = 0;
+	if (but3_flag == 1) {
+		but3_flag = 0;
+	} else {
+		but3_flag = 1;
+	}
 }
 
 /*
@@ -249,16 +261,20 @@ int main (void)
 			}
 		}
 		
-		if (tc4_flag) {
-			pisca_led(LED2_PIO, LED2_IDX_MASK);
-			tc4_flag = 0;
+		if (but2_flag) {
+			if (tc4_flag) {
+				pisca_led(LED2_PIO, LED2_IDX_MASK);
+				tc4_flag = 0;
+			}
 		}
 		
-		if (tc7_flag) {
-			pisca_led(LED3_PIO, LED3_IDX_MASK);
-			tc7_flag = 0;
+		if (but3_flag) {
+			if (tc7_flag) {
+				pisca_led(LED3_PIO, LED3_IDX_MASK);
+				tc7_flag = 0;
+			}
 		}
-				
+		
 		pmc_sleep(SAM_PM_SMODE_SLEEP_WFI);
 	}
 }
